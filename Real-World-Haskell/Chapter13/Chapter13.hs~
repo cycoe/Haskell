@@ -1,0 +1,11 @@
+import Data.List(lookup)
+
+-- There are two types of Map
+-- First one is Associate List
+alist = [(1, "one"), (2, "two"), (3, "three")]
+
+-- use lookup to lookup a value by a key
+lookup1 = lookup 1 alist
+lookup4 = lookup 4 alist
+
+-- Map

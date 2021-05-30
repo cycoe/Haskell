@@ -1,0 +1,142 @@
+#+TITLE: Real World Haskell 读书笔记第 14 章——Monads
+
+** Maybe 类型
+=Maybe= 类型通常用来表示可能不会产生结果的运算
+
+#+begin_src haskell
+  {- Maybe 类型的定义
+  data Maybe a = Nothing
+               | Just a
+  -}
+
+  import Data.List(lookup)
+
+  associateList = [(1, "One"), (2, "Two"), (3, "Three")]
+
+  putStrLn . show $ lookup 2 associateList
+#+end_src
+
+#+RESULTS:
+: Data.List Prelude> Data.List Prelude> Data.List Prelude> Data.List Prelude> Data.List Prelude> Just "Two"
+
+=lookup= 返回了一个被 =Maybe= 包裹的值，我们想要对 =lookup= 返回的结果做计算，就需要将
+包裹的值重新取出来，我们发现可以定义一个 =>>?= 函数用来处理这个过程并隐藏细节
+
+#+begin_src haskell
+  (>>?) :: Maybe a -> (a -> Maybe b) -> Maybe b
+  (>>?) Nothing _ = Nothing
+  (>>?) (Just v) f = f v
+
+  :t (>>?)
+#+end_src
+
+#+RESULTS:
+: Data.List Prelude> Data.List Prelude> Data.List Prelude> (>>?) :: Maybe t1 -> (t1 -> t2) -> t2
+
+接下来我们就可以使用 =>>?= 来取出 =Maybe= 中包裹的值并打印了
+
+#+begin_src haskell
+  lookup 2 associateList >>? putStrLn
+#+end_src
+
+#+RESULTS:
+: Two
+
+** Monad
+
+此处我们发现可以使用 =Maybe= 类型绑定到一个函数 =f :: a -> Maybe b= 上，这种操作称为 =绑定= 。在 Haskell 中我们使用一个类型类来表示可以绑定的类型范畴，称为 =Monad= 。
+
+#+begin_src haskell :results none
+  {- Monad type class
+  class Monad m where
+      -- chain
+      (>>=)  :: m a -> (a -> m b) -> m b
+      -- inject
+      return :: a -> m a
+  -}
+#+end_src
+
+有了 =>>== 运算符，我们就可以实现一个安全的除法，来避免除零操作
+
+#+begin_src haskell
+  safediv :: (Fractional a, Eq a) => a -> a -> Maybe a
+  safediv _ 0 = Nothing
+  safediv a b = Just (a / b)
+
+  safediv 2 3 >>= flip safediv 4 >>= flip safediv 5 >>= flip safediv 0
+#+end_src
+
+#+RESULTS:
+: Prelude> Prelude> Prelude> Just Infinity
+
+另外就是需要实现 =return= 接口，此处的 =return= 与常见的编程语言中的 =return= 不同，它
+并不会导致函数返回，它的语义是将一个平凡值包装为 =Monad=
+
+#+begin_src haskell :file ghci.hs
+  add :: (Num a) => Maybe a -> Maybe a -> Maybe a
+  add a b =
+    a >>= \x ->
+    b >>= \y -> return (x + y)
+
+  add (safediv 2 3) (safediv 3 2)
+  add (safediv 2 0) (safediv 3 2)
+#+end_src
+
+#+RESULTS:
+: Just Infinity
+
+另一个 =Monad= 的非核心函数是 =>>= ，表示丢弃运算符左侧表达式的值，注意函数类型与 =>>== 类型的区别
+
+#+begin_src haskell
+  {-
+  (>>):: (Monad m) => m a -> m b -> m b
+  (>>) a f = a >>= \_ -> f
+  -}
+
+  putStr "Hello, " >> putStr "world!\n"
+#+end_src
+
+#+RESULTS:
+: Prelude System.IO> Hello, world!
+
+** 定义自己的 Monad
+
+此处以一个简单函数进行示例， =addparen= 函数期望一个将一个字符串两侧加上括号
+
+#+begin_src haskell
+  addparen :: String -> String
+  addparen str = "(" ++ str ++ ")"
+
+  addparen "Hello"
+#+end_src
+
+#+RESULTS:
+: Prelude System.IO> Prelude System.IO> "(Hello)"
+
+假如我们不希望将 =addparen= 的运行结果暴露出来，并且能够对过往的调用结果进行记录，
+我们使用 =Logger= 类型将结果包装起来。
+
+#+begin_src haskell :results none
+  addparenWithLog :: String -> Logger String
+#+end_src
+
+=Logger= 中的 =Log= 类型是字符串列表的别名
+
+#+begin_src haskell :results silent
+  type Log = [String]
+#+end_src
+
+定义 =Logger= 和辅助函数
+
+#+begin_src haskell :file ghci.hs
+  data Logger a
+    | Records [(a, Log)]
+
+  record :: String - > Logger a -> Logger a
+  record string Content a = Records [(a, string)]
+  record string Records r = ()
+
+  -- 运行 Logger
+  runLogger :: Logger a -> (a, Log)
+  runLogger Logger x = (x, )
+#+end_src

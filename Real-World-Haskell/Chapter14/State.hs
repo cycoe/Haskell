@@ -95,6 +95,7 @@ runTwoRandoms = do
   R.setStdGen newState
   return result
 
+-- Define a data structure to handle more state
 data CountedRandom = CountedRandom
   { crGen :: R.StdGen,
     crCount :: Int

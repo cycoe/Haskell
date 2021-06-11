@@ -2,11 +2,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import RecursiveContents (getRecursiveContents)
-import System.FilePath (takeExtension)
-import System.Directory (getPermissions, Permissions(..), getModificationTime, doesFileExist)
+import System.FilePath (takeExtension, (</>))
+import System.Directory (getDirectoryContents, getPermissions, Permissions(..), getModificationTime, doesFileExist)
 import System.IO (openFile, IOMode(ReadMode), hClose, hFileSize)
 import Data.Time.Clock (UTCTime(..))
-import Control.Monad (filterM)
+import Control.Monad (forM, mapM, liftM, filterM)
 import Control.Exception (bracket, handle, SomeException(..))
 
 simpleFind :: (FilePath -> Bool) -> FilePath -> IO [FilePath]
